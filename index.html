@@ -185,7 +185,14 @@ Game.playing_state = function(time_delta)
 
 Game.loop = function()
 {
+    Game.last_time = Game.current_time();
+    Game.current_time = +new Date();
+    var delta_time = Game.current_time - Game.last_time;
+}
 
+Game.setup = function()
+{
+    // setup stuff goes here
 }
 
 window.onload = function()

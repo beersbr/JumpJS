@@ -4,14 +4,174 @@
 
 </style>
 <script type="text/javascript" src="scripts/common.js"></script>
+    <script type="text/javascript" ></script>
 <script type="text/javascript" src="scripts/vector.js"></script>
 <script type="text/javascript" src="scripts/list.js"></script>
 <script type="text/javascript">
 
+/** Entity Base class */
+function Entity(args)
+{
+    if(args == undefined) args = {};
+
+    this._x = args.x || 0;
+    this._y = args.y || 0;
+    this.w = args.w || 0;
+    this.h = args.h || 0;
+
+    this._cx = this._x + this.w/2;
+    this._cy = this._y + this.h/2;
+
+    Object.defineProperty(this, "x", {
+        writable: true,
+        get: function(){
+            return this._x;
+        },
+        set: function(v){
+            this._x = v;
+        }
+    });
+
+    Object.defineProperty(this, "y", {
+        writable: true,
+        get: function(){
+            return this._y;
+        },
+        set: function(v){
+            this._y = v;
+        }
+    });
+
+    Object.defineProperty(this, "cx", {
+        writable: true,
+        get: function(){
+            return this._cx;
+        },
+        set: function(v){
+            this._cx = v;
+            this._x = this._cx - this.w/2;
+        }
+    });
+
+    Object.defineProperty(this, "cy", {
+        writable: true,
+        get: function(){
+            return this._cy;
+        },
+        set: function(v){
+            this._cy = v;
+            this._y = this._cy - this.h/2;
+        }
+    });
+
+    /** Needed functions */
+
+    this.Draw = function(ctx)
+    {
+        return true;
+    }
+
+    this.Update = function(elapsed_time)
+    {
+        return true;
+    }
+
+    /** Collision checks */
+    Entity.collisionAABB = function(e1, e2)
+    {
+        if(e1.x > e2.x+e2.w) return false;
+        if(e1.x+e1.w < e2.x) return false;
+        if(e1.y > e2.y+e2.h) return false;
+        if(e1.y+e1.w < e2.y) return false;
+
+        return true;
+    }
+
+    /** returns collision target */
+    Entity.collidesWithAABB = function(entity)
+    {
+        var target = [];
+        Entity.entities.eachValue(function(e){
+            if(entity == e) return false;
+            if(Entity.collisionAABB(entity, e))
+               target.push(e);
+        });
+        return target;
+    }
+
+    if(Entity.entities = undefined)
+        Entity.entities = new List();
+
+    var e = (args.ext) ? args.ext : this;
+    Entity.entities.push(e);
+}
+
+
+/** Class Block */
+function Block(args)
+{
+    if(args == undefined) args = {};
+
+    args.ext = this;
+    Extend(this, Entity, args);
+
+    this.Draw = function(ctx)
+    {
+        ctx.save();
+        
+        ctx.restore();
+    }
+}
+
+function Player(args)
+{
+    if(args == undefined) args = {};
+
+    args.ext = this;
+    Extend(this, Entity, args);
+
+    this.jumping = false;
+    this.attached = false;
+
+    this.Draw = function(context)
+    {
+
+    }
+
+    this.Update = function(elapsed_time)
+    {
+
+    }
+}
+
+/** Game Stuff */
 Game = {};
+
+/** states */
+States = {
+    LOADING: 0,
+    PLAYING: 1,
+    PAUSED: 2
+}
 
 Game.current_time = 0.0;
 Game.last_time = 0.0;
+
+Game.setup = function()
+{
+    Game.canvas = new Canvas();
+    Game.blocks = new List();
+
+    // create the ground block
+    var ground = new Block({
+        x: 0,
+        y: 550,
+        w: 800,
+        h: 60
+    });
+    Game.blocks.push()
+
+}
 
 Game.loading_state = function(time_delta)
 {
@@ -30,9 +190,12 @@ Game.loop = function()
 
 window.onload = function()
 {
-
+    Game.setup();
 }
 
 </script>
 </head>
+<body>
+    <div class="game-canvas" id="canvas"></div>
+</body>
 </html>

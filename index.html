@@ -4,7 +4,7 @@
 
 </style>
 <script type="text/javascript" src="scripts/common.js"></script>
-    <script type="text/javascript" ></script>
+<script type="text/javascript" src="scripts/keyboard.js"></script>
 <script type="text/javascript" src="scripts/vector.js"></script>
 <script type="text/javascript" src="scripts/list.js"></script>
 <script type="text/javascript">
@@ -22,8 +22,10 @@ function Entity(args)
     this._cx = this._x + this.w/2;
     this._cy = this._y + this.h/2;
 
+    this.ax = args.ax || 0;
+    this.ay = args.ay || 0;
+
     Object.defineProperty(this, "x", {
-        writable: true,
         get: function(){
             return this._x;
         },
@@ -33,7 +35,6 @@ function Entity(args)
     });
 
     Object.defineProperty(this, "y", {
-        writable: true,
         get: function(){
             return this._y;
         },
@@ -43,7 +44,6 @@ function Entity(args)
     });
 
     Object.defineProperty(this, "cx", {
-        writable: true,
         get: function(){
             return this._cx;
         },
@@ -54,7 +54,6 @@ function Entity(args)
     });
 
     Object.defineProperty(this, "cy", {
-        writable: true,
         get: function(){
             return this._cy;
         },
@@ -99,8 +98,8 @@ function Entity(args)
         return target;
     }
 
-    if(Entity.entities = undefined)
-        Entity.entities = new List();
+    if(Entity.entities == undefined)
+        Entity.entities = new List.List();
 
     var e = (args.ext) ? args.ext : this;
     Entity.entities.push(e);
@@ -115,11 +114,19 @@ function Block(args)
     args.ext = this;
     Extend(this, Entity, args);
 
+    this.color = new Color(Math.randomInt(100, 200), Math.randomInt(100, 200), Math.randomInt(100, 200));
+
     this.Draw = function(ctx)
     {
         ctx.save();
-        
+        ctx.fillStyle = this.color.toString();
+        ctx.fillRect(this.x, this.y, this.w, this.h);
         ctx.restore();
+    }
+
+    this.Update = function()
+    {
+        return true;
     }
 }
 
@@ -127,19 +134,52 @@ function Player(args)
 {
     if(args == undefined) args = {};
 
+    args.x = 35;
+    args.y = 35;
+    args.w = 35;
+    args.h = 60;
+
     args.ext = this;
     Extend(this, Entity, args);
 
     this.jumping = false;
     this.attached = false;
 
-    this.Draw = function(context)
-    {
+    this.gravity = 0.9;
 
+    this.color = new Color(230, 230, 230);
+
+    this.Draw = function(ctx)
+    {
+        ctx.save();
+        ctx.fillStyle = this.color.toString();
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+        ctx.restore();
     }
 
-    this.Update = function(elapsed_time)
+    this.Update = function(time_delta, keyboard)
     {
+
+        // jump
+        if(keyboard.keyIsDown('w') || keyboard.keyIsDown('up_arrow'))
+        {
+            this.jumping = true;
+        }
+        if(keyboard.keyIsDown('a') || keyboard.keyIsDown('left_arrow'))
+        {
+
+        }
+        if(keyboard.keyIsDown('s') || keyboard.keyIsDown('down_arrow'))
+        {
+
+        }
+        if(keyboard.keyIsDown('d') || keyboard.keyIsDown('right_arrow'))
+        {
+
+        }
+
+        // do all the calculations
+        this.ax
 
     }
 }
@@ -151,16 +191,16 @@ Game = {};
 States = {
     LOADING: 0,
     PLAYING: 1,
-    PAUSED: 2
+    PAUSED: 2,
+    SETUP: 3
 }
 
 Game.current_time = 0.0;
 Game.last_time = 0.0;
 
-Game.setup = function()
+Game.setup = function(time_delta)
 {
-    Game.canvas = new Canvas();
-    Game.blocks = new List();
+    Game.blocks = new List.List();
 
     // create the ground block
     var ground = new Block({
@@ -169,35 +209,61 @@ Game.setup = function()
         w: 800,
         h: 60
     });
-    Game.blocks.push()
 
+    Game.player = new Player();
+
+    Game.blocks.push(ground);
 }
 
 Game.loading_state = function(time_delta)
 {
+    console.log("loading");
+
+    // if we are done loading...
+    Game.setup(time_delta);
+    Game.state = States.PLAYING;
 
 }
 
-Game.playing_state = function(time_delta)
+Game.playing_state = function(time_delta, keyboard)
 {
-
+    //draw and update each entity
+    Entity.entities.eachValue(function(e){
+        e.Draw(Game.canvas.context);
+        e.Update(time_delta, keyboard);
+    });
 }
 
 Game.loop = function()
 {
-    Game.last_time = Game.current_time();
+    Game.last_time = Game.current_time;
     Game.current_time = +new Date();
     var delta_time = Game.current_time - Game.last_time;
-}
 
-Game.setup = function()
-{
-    // setup stuff goes here
+    Game.canvas.context.clearRect(0, 0, 800, 600);
+
+    switch(Game.state)
+    {
+        case States.LOADING:
+            Game.loading_state(delta_time);
+            break;
+        case States.PAUSED:
+            break;
+        case States.PLAYING:
+            Game.playing_state(delta_time, Game.keyboard);
+            break;
+    }
+
+    requestAnimFrame(Game.loop);
 }
 
 window.onload = function()
 {
-    Game.setup();
+    Game.canvas = new Canvas();
+    Game.keyboard = new KeyboardHandler();
+
+    Game.state = States.LOADING;
+    Game.loop();
 }
 
 </script>

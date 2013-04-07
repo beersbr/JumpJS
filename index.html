@@ -19,6 +19,10 @@ function Entity(args)
     this.w = args.w || 0;
     this.h = args.h || 0;
 
+    // half width and height
+    this.hw = this.w/2;
+    this.hh = this.h/2;
+
     this._cx = this._x + this.w/2;
     this._cy = this._y + this.h/2;
 
@@ -137,15 +141,15 @@ function Player(args)
     args.x = 35;
     args.y = 35;
     args.w = 35;
-    args.h = 60;
+    args.h = 50;
 
     args.ext = this;
     Extend(this, Entity, args);
 
     this.jumping = false;
-    this.attached = false;
+    this.attatched = false;
 
-    this.gravity = 0.9;
+    this.gravity = 0.65;
 
     this.color = new Color(230, 230, 230);
 
@@ -164,10 +168,11 @@ function Player(args)
         if(keyboard.keyIsDown('w') || keyboard.keyIsDown('up_arrow'))
         {
             this.jumping = true;
+
         }
         if(keyboard.keyIsDown('a') || keyboard.keyIsDown('left_arrow'))
         {
-
+            this.ax -= 0.9;
         }
         if(keyboard.keyIsDown('s') || keyboard.keyIsDown('down_arrow'))
         {
@@ -175,12 +180,28 @@ function Player(args)
         }
         if(keyboard.keyIsDown('d') || keyboard.keyIsDown('right_arrow'))
         {
+            this.ax += 0.9;
+        }
+
+
+        // do all the calculations
+        this.ay += (this.jumping || !this.attatched) ? this.gravity : 0.0;
+
+        // check for collision and then make the final moves
+        var targets = Entity.collidesWithAABB(this);
+        for(var idx in targets)
+        {
+            var target = targets[idx];
+
+            // get my orientation with respect to the target
+            var minimum_x_space = this.hw + target.hw;
+            var mininum_y_space = this.hh + target.hh;
+//            var actual_x_space = this.
 
         }
 
-        // do all the calculations
-        this.ax
-
+        this.x += this.ax;
+        this.y += this.ay;
     }
 }
 

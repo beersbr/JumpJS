@@ -2,6 +2,20 @@
 <head>
 <style type="text/css">
 
+    div.game-canvas{
+        float: left;
+    }
+
+    div.debug{
+        float: right;
+        width: 400px;
+        height: 600px;
+    }
+
+    textarea#debug{
+        overflow: scroll;
+    }
+
 </style>
 <script type="text/javascript" src="scripts/common.js"></script>
 <script type="text/javascript" src="scripts/keyboard.js"></script>
@@ -35,6 +49,7 @@ function Entity(args)
         },
         set: function(v){
             this._x = v;
+            this._cx = this._x + this.hw;
         }
     });
 
@@ -44,6 +59,7 @@ function Entity(args)
         },
         set: function(v){
             this._y = v;
+            this._cy = this._y + this.hh;
         }
     });
 
@@ -146,10 +162,11 @@ function Player(args)
     args.ext = this;
     Extend(this, Entity, args);
 
-    this.jumping = false;
-    this.attatched = false;
+    this.jumping = true;
+    this.attached = false;
 
     this.gravity = 0.65;
+    this.friction = 0.88;
 
     this.color = new Color(230, 230, 230);
 
@@ -163,12 +180,15 @@ function Player(args)
 
     this.Update = function(time_delta, keyboard)
     {
-
         // jump
         if(keyboard.keyIsDown('w') || keyboard.keyIsDown('up_arrow'))
         {
-            this.jumping = true;
-
+            if(!this.jumping || this.attached)
+            {
+                this.attached = false;
+                this.jumping = true;
+                this.ay -= 11.5;
+            }
         }
         if(keyboard.keyIsDown('a') || keyboard.keyIsDown('left_arrow'))
         {
@@ -183,9 +203,11 @@ function Player(args)
             this.ax += 0.9;
         }
 
-
         // do all the calculations
-        this.ay += (this.jumping || !this.attatched) ? this.gravity : 0.0;
+        this.ay += this.gravity; //(this.jumping || !this.attached) ? this.gravity : 0.0;
+
+        this.x += this.ax *= this.friction;
+        this.y += this.ay;
 
         // check for collision and then make the final moves
         var targets = Entity.collidesWithAABB(this);
@@ -195,18 +217,59 @@ function Player(args)
 
             // get my orientation with respect to the target
             var minimum_x_space = this.hw + target.hw;
-            var mininum_y_space = this.hh + target.hh;
-//            var actual_x_space = this.
+            var minimum_y_space = this.hh + target.hh;
+            var actual_x_space = this.cx - target.cx;
+            var actual_y_space = this.cy - target.cy;
 
+            Game.debug.log(minimum_x_space - Math.abs(actual_x_space),  minimum_y_space - Math.abs(actual_y_space));
+
+            // left/right collision
+            if(minimum_x_space - Math.abs(actual_x_space) < minimum_y_space - Math.abs(actual_y_space))
+            {
+                Game.debug.log("X");
+                this.ax = 0;
+
+                if(this.cx < target.cx)
+                    this.x -= minimum_x_space + actual_x_space;
+                else
+                    this.x += minimum_x_space + actual_x_space;
+
+                this.attached = true;
+                this.ay /= 2;
+
+            }
+            else // up/down collision
+            {
+                Game.debug.log("Y");
+                this.ay = 0;
+                this.y -= minimum_y_space + actual_y_space;
+                this.jumping = false;
+                this.attached = true;
+            }
         }
-
-        this.x += this.ax;
-        this.y += this.ay;
     }
 }
 
 /** Game Stuff */
 Game = {};
+
+Game.debug = {};
+Game.debug.init = function()
+{
+    Game.debug._out = document.getElementById("debug");
+}
+Game.debug.log = function()
+{
+    if(Game.debug._out != null)
+    {
+        for(var i = 0; i < arguments.length; i++)
+            Game.debug._out.textContent += arguments[i] + " ";
+        Game.debug._out.textContent += "\n";
+
+        Game.debug._out.scrollTop = Game.debug._out.scrollHeight;
+    }
+}
+
 
 /** states */
 States = {
@@ -231,9 +294,17 @@ Game.setup = function(time_delta)
         h: 60
     });
 
+    var test_block = new Block({
+        x: 200,
+        y: 300,
+        w: 50,
+        h: 250
+    });
+
     Game.player = new Player();
 
     Game.blocks.push(ground);
+    Game.blocks.push(test_block);
 }
 
 Game.loading_state = function(time_delta)
@@ -243,7 +314,6 @@ Game.loading_state = function(time_delta)
     // if we are done loading...
     Game.setup(time_delta);
     Game.state = States.PLAYING;
-
 }
 
 Game.playing_state = function(time_delta, keyboard)
@@ -253,6 +323,10 @@ Game.playing_state = function(time_delta, keyboard)
         e.Draw(Game.canvas.context);
         e.Update(time_delta, keyboard);
     });
+
+//    Entity.entities.eachValue(function(e){
+//        e.Update(time_delta, keyboard);
+//    });
 }
 
 Game.loop = function()
@@ -274,12 +348,13 @@ Game.loop = function()
             Game.playing_state(delta_time, Game.keyboard);
             break;
     }
-
     requestAnimFrame(Game.loop);
 }
 
 window.onload = function()
 {
+    Game.debug.init();
+
     Game.canvas = new Canvas();
     Game.keyboard = new KeyboardHandler();
 
@@ -291,5 +366,8 @@ window.onload = function()
 </head>
 <body>
     <div class="game-canvas" id="canvas"></div>
+    <div class="debug">
+        <textarea name="" id="debug" cols="45" rows="38"></textarea>
+    </div>
 </body>
 </html>

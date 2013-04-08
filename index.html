@@ -37,8 +37,8 @@ function Entity(args)
     this.hw = this.w/2;
     this.hh = this.h/2;
 
-    this._cx = this._x + this.w/2;
-    this._cy = this._y + this.h/2;
+    this._cx = this._x + this.hw;
+    this._cy = this._y + this.hh;
 
     this.ax = args.ax || 0;
     this.ay = args.ay || 0;
@@ -69,7 +69,7 @@ function Entity(args)
         },
         set: function(v){
             this._cx = v;
-            this._x = this._cx - this.w/2;
+            this._x = this._cx - this.hw;
         }
     });
 
@@ -79,7 +79,7 @@ function Entity(args)
         },
         set: function(v){
             this._cy = v;
-            this._y = this._cy - this.h/2;
+            this._y = this._cy - this.hh;
         }
     });
 
@@ -101,7 +101,7 @@ function Entity(args)
         if(e1.x > e2.x+e2.w) return false;
         if(e1.x+e1.w < e2.x) return false;
         if(e1.y > e2.y+e2.h) return false;
-        if(e1.y+e1.w < e2.y) return false;
+        if(e1.y+e1.h < e2.y) return false;
 
         return true;
     }
@@ -183,7 +183,7 @@ function Player(args)
         // jump
         if(keyboard.keyIsDown('w') || keyboard.keyIsDown('up_arrow'))
         {
-            if(!this.jumping || this.attached)
+            if(!this.jumping && !this.attached)
             {
                 this.attached = false;
                 this.jumping = true;
@@ -193,6 +193,11 @@ function Player(args)
         if(keyboard.keyIsDown('a') || keyboard.keyIsDown('left_arrow'))
         {
             this.ax -= 0.9;
+            if(this.attached)
+            {
+                this.ay -= 11.5;
+                this.attached = false;
+            }
         }
         if(keyboard.keyIsDown('s') || keyboard.keyIsDown('down_arrow'))
         {
@@ -201,12 +206,16 @@ function Player(args)
         if(keyboard.keyIsDown('d') || keyboard.keyIsDown('right_arrow'))
         {
             this.ax += 0.9;
+            if(this.attached){
+                this.ay -= 11.5;
+                this.attached = false;
+            }
         }
 
         // do all the calculations
-        this.ay += this.gravity; //(this.jumping || !this.attached) ? this.gravity : 0.0;
+        this.ay += this.gravity; //(this.jumping) ? this.gravity : 0.0;
 
-        this.x += this.ax *= this.friction;
+        this.x += (this.ax *= this.friction);
         this.y += this.ay;
 
         // check for collision and then make the final moves
@@ -221,30 +230,25 @@ function Player(args)
             var actual_x_space = this.cx - target.cx;
             var actual_y_space = this.cy - target.cy;
 
-            Game.debug.log(minimum_x_space - Math.abs(actual_x_space),  minimum_y_space - Math.abs(actual_y_space));
-
             // left/right collision
-            if(minimum_x_space - Math.abs(actual_x_space) < minimum_y_space - Math.abs(actual_y_space))
+            if((minimum_x_space - Math.abs(actual_x_space)) < (minimum_y_space - Math.abs(actual_y_space)))
             {
-                Game.debug.log("X");
                 this.ax = 0;
 
                 if(this.cx < target.cx)
                     this.x -= minimum_x_space + actual_x_space;
                 else
-                    this.x += minimum_x_space + actual_x_space;
+                    this.x += minimum_x_space - actual_x_space;
 
                 this.attached = true;
                 this.ay /= 2;
-
             }
             else // up/down collision
             {
-                Game.debug.log("Y");
                 this.ay = 0;
                 this.y -= minimum_y_space + actual_y_space;
                 this.jumping = false;
-                this.attached = true;
+                this.attached = false;
             }
         }
     }
@@ -291,7 +295,7 @@ Game.setup = function(time_delta)
         x: 0,
         y: 550,
         w: 800,
-        h: 60
+        h: 50
     });
 
     var test_block = new Block({
@@ -323,10 +327,6 @@ Game.playing_state = function(time_delta, keyboard)
         e.Draw(Game.canvas.context);
         e.Update(time_delta, keyboard);
     });
-
-//    Entity.entities.eachValue(function(e){
-//        e.Update(time_delta, keyboard);
-//    });
 }
 
 Game.loop = function()
